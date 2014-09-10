@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<body>
+<meta charset="utf-8">
+<title>line stamp checker</title>
+
+<style>
+div#drop
+{
+	border : solid 2px black;
+	padding : 100px;
+	background-color : yellow;
+}
+</style>
+
+
+
+<div id="drop"
+	ondragover="f1(event);"
+	ondrop="f2(event)">
+	ここにファイルをドロップしてね
+</div>
+
+<hr>
+
+
+<script src="zlib.js"></script>
+<script src="png.js"></script>
+
+<script>
+
+// ドロップ受け付け判定
+function f1( event )
+{
+	// ドロップを受け付ける
+	event.preventDefault();
+}
+
+
+// ドロップ処理
+function f2(event)
+{
+	// ページの遷移を防止
+	event.preventDefault();
+
+
+	var files = event.dataTransfer.files;
+	
+	for (var ii=0, f; ii<files.length; ii++)
+	{
+		f = files[ii];
+		
+		if( f.type != "image/png" )
+		{
+			alert( f.name + " pngじゃない" );
+			return;
+		}
+
+		if( 1048576 < f.size )
+		{
+			alert( f.name + " ファイル容量オーバー" );
+			return;
+		}
+
+
+		var reader		= new FileReader();
+		reader.filedata	= f;
+		
+		reader.onloadend = function(e)
+		{
+			var tmpStr		= "";
+			var fr			= e.target;
+			var filename	= fr.filedata.name;
+			
+			tmpStr += filename
+
+			var ary_u8	= new Uint8Array( fr.result );
+			var png		= new PNG( ary_u8 );
+			var a_counter	= 0;
+			
+			
+			if( 370 < png.width )	{ tmpStr += " ヨコでかすぎ"; }
+			if( 320 < png.height )	{ tmpStr += " タテでかすぎ"; }
+			
+			if( png.width % 2 !=0 )	{ tmpStr += " ヨコ偶数じゃない"; }
+			if( png.height % 2 !=0 ){ tmpStr += " タテ偶数じゃない"; }
+
+
+			var datas = png.decode();		//datas -> rgbargba.....
+
+
+			for( var yy=0; yy<png.height; ++yy )
+			{
+				for( var xx=0; xx<png.width; ++xx )
+				{
+					var idx_a	= (((yy*png.width)+xx) * 4) + 3;
+
+					if( xx<10 || yy<10 || (png.width-xx)<=10 || (png.height-yy)<=10 )
+					{
+						if( datas[idx_a] != 0 )
+						{
+							datas[idx_a-3]	= 0xFF;
+							datas[idx_a-2]	= 0x0;
+							datas[idx_a-1]	= 0xFF;
+							datas[idx_a]	= 0xFF;
+							a_counter++;
+						}
+					}
+				}
+			}
+
+			tmpStr += " 10px余白内ドット数 " +a_counter;
+
+
+			var divElement = document.createElement("div");
+			var txtElement = document.createTextNode(tmpStr);
+
+			divElement.appendChild( txtElement );
+			divElement.appendChild( document.createElement("BR") );
+
+
+			var canvasElement	= document.createElement("canvas");
+			canvasElement.width	= png.width;
+			canvasElement.height= png.height;
+			var ctx				= canvasElement.getContext("2d");
+			var img				= ctx.createImageData(png.width, png.height);
+			img.data.set(datas);
+
+			ctx.putImageData(img, 0, 0);
+			divElement.appendChild( canvasElement );
+
+
+//			var canvasElement	= document.createElement("canvas");
+//			png.render(canvasElement);
+//			divElement.appendChild( canvasElement );
+
+//			var imgElement = document.createElement("img");
+//			imgElement.src	= "data:image/png;base64," + btoa(String.fromCharCode.apply(null, ary_u8));
+//			divElement.appendChild( imgElement );
+
+
+			divElement.appendChild( document.createElement("HR") );
+			document.body.appendChild( divElement );
+
+		};
+		reader.readAsArrayBuffer( f );
+
+	}
+}
+
+</script>
+</body>
+</html>
