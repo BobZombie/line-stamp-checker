@@ -4,20 +4,65 @@
 <title>line stamp checker</title>
 
 <style>
+body
+{
+	background-color	: #7193C2;
+	margin				: 0 auto;
+}
+
+p.hoge
+{
+	background-color	: gray;
+	font-weight			: bold;
+}
+
 div#drop
 {
-	border : solid 2px black;
-	padding : 100px;
-	background-color : yellow;
+	border				: solid 2px black;
+	padding				: 100px;
+	background-color	: teal;
+	float				: left;
 }
+
+div#color
+{
+	position			: fixed;
+	top					: 0px;
+	right				: 0px;
+	background-color	: gray;
+	border				: 1px solid black;
+	z-index: 9999;
+}
+
+div#result
+{
+	clear				: both;
+	font-weight			: bold;
+	margin				: 10px;
+	padding				: 10px;
+	background-color	: white;
+}
+
 </style>
 
 
 
-<div id="drop"
-	ondragover="f1(event);"
-	ondrop="f2(event)">
-	ここにファイルをドロップしてね
+
+<div id="drop" ondragover="f1(event);" ondrop="f2(event)">
+	<FONT color=white>ここにファイルをドロップしてね</FONT>
+</div>
+
+<div id="color">
+	<form name="cform" >
+		<input type="color" name="cinput">
+		<input type="button" value="背景色変更" onclick="chgBGColor()">
+		<BR/>
+		<input type="button" value="画像表示サイズ－" onclick="chgSize(-1)">
+		<input type="button" value="画像表示サイズ＋" onclick="chgSize(1)">
+	</form>
+</div>
+
+<div id="result">
 </div>
 
 <hr>
@@ -27,6 +72,30 @@ div#drop
 <script src="png.js"></script>
 
 <script>
+
+function chgBGColor()
+{
+	document.body.style.backgroundColor = document.cform.cinput.value;
+}
+
+var sScale = 1.0;
+
+function chgSize(param)
+{
+	sScale += (0.1 * param);
+	
+	var elements	= document.getElementsByTagName('canvas');
+
+	var ii	= elements.length;
+	while (--ii>=0)
+	{
+		elements[ii].style.width = "" + elements[ii].width * sScale + "px";
+	}
+}
+
+
+
+
 
 // ドロップ受け付け判定
 function f1( event )
@@ -49,40 +118,59 @@ function f2(event)
 	{
 		f = files[ii];
 		
-		if( f.type != "image/png" )
-		{
-			alert( f.name + " pngじゃない" );
-			return;
-		}
-
-		if( 1048576 < f.size )
-		{
-			alert( f.name + " ファイル容量オーバー" );
-			return;
-		}
-
-
 		var reader		= new FileReader();
 		reader.filedata	= f;
 		
 		reader.onloadend = function(e)
 		{
 			var tmpStr		= "";
+			var msgStr		= "";
+			var errLv		= 0;
 			var fr			= e.target;
-			var filename	= fr.filedata.name;
 			
-			tmpStr += filename
+			msgStr	+= "●ファイル名："+fr.filedata.name+"<BR/>";
+
+			if( fr.filedata.type != "image/png" )
+			{
+				msgStr	+= "<FONT color=red>ＮＧ　PNGファイルではないようです</FONT><BR/>";
+				errLv|=2;
+				addHtml( msgStr, null,0,0, errLv );
+				return;
+			}
+
+			if( 1048576 < fr.filedata.size )
+			{
+				msgStr	+= "<FONT color=red>ＮＧ　ファイル容量オーバーしています</FONT><BR/>";
+				errLv|=2;
+			}
 
 			var ary_u8	= new Uint8Array( fr.result );
 			var png		= new PNG( ary_u8 );
 			var a_counter	= 0;
 			
 			
-			if( 370 < png.width )	{ tmpStr += " ヨコでかすぎ"; }
-			if( 320 < png.height )	{ tmpStr += " タテでかすぎ"; }
+			msgStr += "●ヨコピクセル："+png.width+"px<BR/>";
+			tmpStr	= "";
+			if( 370 < png.width )	{ tmpStr += "　<FONT color=red>ＮＧ　大きすぎます</FONT><BR/>"; errLv|=2; }
+			else if(png.width<250)	{ tmpStr += "　<FONT color=yellow>WARNING　250px以下</FONT><BR/>"; errLv|=1; }
 			
-			if( png.width % 2 !=0 )	{ tmpStr += " ヨコ偶数じゃない"; }
-			if( png.height % 2 !=0 ){ tmpStr += " タテ偶数じゃない"; }
+			if( png.width % 2 !=0 )	{ tmpStr += "　<FONT color=yellow>WARNING　奇数ピクセル数</FONT><BR/>"; errLv|=1; }
+			
+			if(tmpStr!="")			{ msgStr += tmpStr; }
+			else					{ msgStr += "　<FONT color=lime>ＯＫ</FONT><BR/>"; }
+
+
+
+			msgStr += "●タテピクセル："+png.height+"px<BR/>";
+			tmpStr	= "";
+			if( 320 < png.height )	{ tmpStr += "　<FONT color=red>ＮＧ　大きすぎます</FONT><BR/>"; errLv|=2; }
+			else if(png.height<250)	{ tmpStr += "　<FONT color=yellow>WARNING　250px以下</FONT><BR/>"; errLv|=1; }
+
+			if( png.height % 2 !=0 ){ tmpStr += "　<FONT color=yellow>WARNING　奇数ピクセル数</FONT><BR/>"; errLv|=1; }
+
+			if(tmpStr!="")			{ msgStr += tmpStr; }
+			else					{ msgStr += "　<FONT color=lime>ＯＫ</FONT><BR/>"; }
+
 
 
 			var datas = png.decode();		//datas -> rgbargba.....
@@ -108,44 +196,79 @@ function f2(event)
 				}
 			}
 
-			tmpStr += " 10px余白内ドット数 " +a_counter;
+			msgStr += "●周囲10px余白内ドット数：" +a_counter+"<BR/>";
+			if( a_counter==0 )			{ msgStr += "　<FONT color=lime>ＯＫ</FONT>"; }
+			else if( a_counter<100 )	{ msgStr += "　<FONT color=yellow>WARNING　画像周囲をもう少し開けたほうがいいかもしれません</FONT>"; errLv|=1; }
+			else						{ msgStr += "　<FONT color=red>ＮＧ　画像周囲のドットが多すぎるようです</FONT>"; errLv|=2; }
+			msgStr += "<BR/>";
 
+			addHtml( msgStr, datas, png.width, png.height, errLv );
 
-			var divElement = document.createElement("div");
-			var txtElement = document.createTextNode(tmpStr);
-
-			divElement.appendChild( txtElement );
-			divElement.appendChild( document.createElement("BR") );
-
-
-			var canvasElement	= document.createElement("canvas");
-			canvasElement.width	= png.width;
-			canvasElement.height= png.height;
-			var ctx				= canvasElement.getContext("2d");
-			var img				= ctx.createImageData(png.width, png.height);
-			img.data.set(datas);
-
-			ctx.putImageData(img, 0, 0);
-			divElement.appendChild( canvasElement );
-
-
-//			var canvasElement	= document.createElement("canvas");
-//			png.render(canvasElement);
-//			divElement.appendChild( canvasElement );
-
-//			var imgElement = document.createElement("img");
-//			imgElement.src	= "data:image/png;base64," + btoa(String.fromCharCode.apply(null, ary_u8));
-//			divElement.appendChild( imgElement );
-
-
-			divElement.appendChild( document.createElement("HR") );
-			document.body.appendChild( divElement );
 
 		};
 		reader.readAsArrayBuffer( f );
 
 	}
 }
+
+
+var numOK		= 0;
+var numWARNING	= 0;
+var numNG		= 0;
+
+function addHtml(htmlStr, png_data, ww, hh, errLv)
+{
+	var divElement = document.createElement("div");
+
+	var pElement = document.createElement("p");
+	pElement.setAttribute("class", "hoge");
+
+	pElement.innerHTML = htmlStr;
+
+	divElement.appendChild( pElement );
+
+	divElement.appendChild( document.createElement("BR") );
+
+	if(png_data)
+	{
+		var canvasElement	= document.createElement("canvas");
+		canvasElement.width	= ww;
+		canvasElement.height= hh;
+		var ctx				= canvasElement.getContext("2d");
+		var img				= ctx.createImageData(ww, hh);
+		img.data.set(png_data);
+
+		ctx.putImageData(img, 0, 0);
+		divElement.appendChild( canvasElement );
+	}
+
+	divElement.appendChild( document.createElement("HR") );
+	document.body.appendChild( divElement );
+
+	if( errLv & 2 )
+	{
+		numNG++;
+	}
+	else if( errLv & 1 )
+	{
+		numWARNING++;
+	}
+	else
+	{
+		numOK++;
+	}
+
+	
+	document.getElementById("result").innerHTML = 
+	"チェックファイル数："+(numOK+numWARNING+numNG) + "<BR/>" +
+	"ＯＫ："	+ numOK + "<BR/>" +
+	"WARNING："	+ numWARNING + "<BR/>" +
+	"ＮＧ："	+ numNG + "<BR/>";
+
+}
+
+
+
 
 </script>
 </body>
