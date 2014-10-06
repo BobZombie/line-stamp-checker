@@ -12,5 +12,5 @@ Open a browser window and drag & drop index.html.
 
 # Images
 
-!(screenshot.JPG)
+![screenshot](screenshot.JPG)
 
