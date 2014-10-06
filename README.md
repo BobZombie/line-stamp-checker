@@ -1,11 +1,16 @@
 line-stamp-checker
 ==================
 
+# About
+
 line stamp check tool
 
 
-Usage
------
+# Usage
 
-Drag & Drop index.html
+Open a browser window and drag & drop index.html.
+
+# Images
+
+!(/screenshot.JPG)
 
